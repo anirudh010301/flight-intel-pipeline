@@ -1,0 +1,37 @@
+# Environment variables - never push to GitHub
+.env
+
+# Mac system files
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+
+# Airflow logs and database
+logs/
+airflow.db
+airflow.cfg
+
+# dbt generated files
+dbt_project/target/
+dbt_project/dbt_packages/
+
+# Data files - too large for GitHub
+data/raw/
+data/processed/
+data/quarantine/
+
+# Great Expectations - generated files
+great_expectations/uncommitted/
+
+# ML models - too large for GitHub
+ml/models/*.joblib
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
