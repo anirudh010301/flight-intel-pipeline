@@ -6,7 +6,7 @@ python-dotenv==1.0.1
 
 # Database
 psycopg2-binary==2.9.9
-sqlalchemy==1.4.46
+sqlalchemy==2.0.0
 
 # dbt
 dbt-core==1.7.4
