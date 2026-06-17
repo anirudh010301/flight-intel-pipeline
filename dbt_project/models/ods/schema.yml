@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: ods_flights
+    description: "Cleaned and enriched flight data with business classifications"
+    columns:
+      - name: id
+        description: "Primary key from raw flights"
+        tests:
+          - not_null
+      - name: airline_name
+        description: "Standardized airline name"
+        tests:
+          - not_null
+      - name: origin_city
+        description: "Departure city"
+        tests:
+          - not_null
+      - name: destination_city
+        description: "Arrival city"
+        tests:
+          - not_null
+      - name: flight_type
+        description: "domestic_india, domestic_us or international"
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                ["domestic_india", "domestic_us", "international", "unknown"]
+      - name: price_category
+        description: "budget, mid, premium or unknown"
+        tests:
+          - accepted_values:
+              values: ["budget", "mid", "premium", "unknown"]
+      - name: delay_category
+        description: "on_time, minor_delay, major_delay, severe_delay or unknown"
+        tests:
+          - accepted_values:
+              values:
+                [
+                  "on_time",
+                  "minor_delay",
+                  "major_delay",
+                  "severe_delay",
+                  "unknown",
+                ]
+      - name: data_source
+        description: "Which source this row came from"
+        tests:
+          - not_null

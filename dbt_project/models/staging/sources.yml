@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: flight_raw
+    description: "Raw flight data loaded from all 3 sources"
+    database: flight_db
+    schema: public
+    tables:
+      - name: raw_flights
+        description: "Landing zone for all 3 data sources"
+        columns:
+          - name: id
+            description: "Primary key"
+            tests:
+              - unique
+              - not_null
+          - name: airline_name
+            description: "Name of the airline"
+          - name: origin_city
+            description: "Departure city"
+          - name: destination_city
+            description: "Arrival city"
+          - name: duration_hours
+            description: "Flight duration in hours"
+          - name: price
+            description: "Ticket price"
+          - name: data_source
+            description: "Which source this row came from"
+            tests:
+              - not_null
+              - accepted_values:
+                  values:
+                    ["kaggle_indian", "kaggle_us", "aviationstack_api", "test"]
