@@ -134,51 +134,52 @@ def run_quality_checks(df, source_name):
         return pd.DataFrame()
 
 def quarantine_failed_rows(failed_rows, failure_reasons, source_name):
-    """
-    Sends failed rows to the quarantine table.
-    These rows will never reach the ML model.
-    """
     logger.info(f"Sending {len(failed_rows)} rows to quarantine...")
 
-    engine = get_engine()
+    import psycopg2
+    conn = psycopg2.connect(
+        host=os.getenv('POSTGRES_HOST'),
+        port=os.getenv('POSTGRES_PORT'),
+        user=os.getenv('POSTGRES_USER'),
+        password=os.getenv('POSTGRES_PASSWORD'),
+        dbname=os.getenv('POSTGRES_DB')
+    )
+    cursor = conn.cursor()
 
-    quarantine_records = []
     for row, reason in zip(failed_rows, failure_reasons):
-        quarantine_records.append({
-            'original_table': 'raw_flights',
-            'data_source': source_name,
-            'raw_data': str(dict(row)),
-            'failure_reason': reason
-        })
-
-    quarantine_df = pd.DataFrame(quarantine_records)
-
-    with engine.begin() as conn:
-        quarantine_df.to_sql(
-            'quarantine',
-            conn,
-            if_exists='append',
-            index=False
+        cursor.execute(
+            """INSERT INTO quarantine 
+            (original_table, data_source, raw_data, failure_reason) 
+            VALUES (%s, %s, %s, %s)""",
+            ('raw_flights', source_name, str(dict(row)), reason)
         )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
 
     logger.warning(f"Quarantined {len(failed_rows)} rows from {source_name}")
 
 def get_quality_summary():
-    """
-    Returns a summary of quarantined rows by source and reason.
-    """
-    engine = get_engine()
-    with engine.connect() as conn:
-        result = conn.execute(
-            text("""
-                SELECT data_source, failure_reason, COUNT(*) as count
-                FROM quarantine
-                GROUP BY data_source, failure_reason
-                ORDER BY count DESC
-                LIMIT 20
-            """)
-        )
-        rows = result.fetchall()
+    import psycopg2
+    conn = psycopg2.connect(
+        host=os.getenv('POSTGRES_HOST'),
+        port=os.getenv('POSTGRES_PORT'),
+        user=os.getenv('POSTGRES_USER'),
+        password=os.getenv('POSTGRES_PASSWORD'),
+        dbname=os.getenv('POSTGRES_DB')
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT data_source, failure_reason, COUNT(*) as count
+        FROM quarantine
+        GROUP BY data_source, failure_reason
+        ORDER BY count DESC
+        LIMIT 20
+    """)
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
 
     logger.info("Quality summary — top failure reasons:")
     for row in rows:

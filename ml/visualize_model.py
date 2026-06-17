@@ -27,7 +27,14 @@ def get_engine():
 
 def load_data():
     """Loads data from mart_flights for visualization."""
-    engine = get_engine()
+    import psycopg2
+    conn = psycopg2.connect(
+        host=os.getenv('POSTGRES_HOST'),
+        port=os.getenv('POSTGRES_PORT'),
+        user=os.getenv('POSTGRES_USER'),
+        password=os.getenv('POSTGRES_PASSWORD'),
+        dbname=os.getenv('POSTGRES_DB')
+    )
     query = """
         SELECT
             airline_name,
@@ -53,7 +60,8 @@ def load_data():
         AND price > 0
         AND data_source = 'kaggle_indian'
     """
-    df = pd.read_sql(query, engine)
+    df = pd.read_sql(query, conn)
+    conn.close()
     logger.info(f"Loaded {len(df)} rows for visualization")
     return df
 

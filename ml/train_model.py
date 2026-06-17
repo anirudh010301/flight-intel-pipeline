@@ -35,7 +35,14 @@ def load_training_data():
     """
     logger.info("Loading training data from mart_flights...")
 
-    engine = get_engine()
+    import psycopg2
+    conn = psycopg2.connect(
+        host=os.getenv('POSTGRES_HOST'),
+        port=os.getenv('POSTGRES_PORT'),
+        user=os.getenv('POSTGRES_USER'),
+        password=os.getenv('POSTGRES_PASSWORD'),
+        dbname=os.getenv('POSTGRES_DB')
+    )
 
     query = """
         SELECT
@@ -64,7 +71,8 @@ def load_training_data():
         AND destination_city IS NOT NULL
     """
 
-    df = pd.read_sql(query, engine)
+    df = pd.read_sql(query, conn)
+    conn.close()
     logger.info(f"Loaded {len(df)} rows for training")
     return df
 
