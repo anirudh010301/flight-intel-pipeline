@@ -1,4 +1,6 @@
 services:
+  # ── PostgreSQL Database ──────────────────────────────────────
+  # Already working from Phase 3 — unchanged
   postgres:
     image: postgres:15
     container_name: flight_postgres
@@ -7,11 +9,83 @@ services:
       POSTGRES_PASSWORD: flight_password
       POSTGRES_DB: flight_db
     ports:
+      # 5435 on your Mac maps to 5432 inside container
+      # Avoids conflicts with previous projects on 5432
       - "5435:5432"
     volumes:
+      # Persists data even when container restarts
       - flight_intel_postgres_data:/var/lib/postgresql/data
+      # Runs init.sql on first startup to create all tables
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
+    networks:
+      - flight_network
 
+  # ── FastAPI REST Layer ───────────────────────────────────────
+  fastapi:
+    build:
+      context: .. # Build from project root — not docker folder
+      dockerfile: docker/Dockerfile.fastapi
+    container_name: flight_fastapi
+    ports:
+      - "8000:8000"
+    environment:
+      # These match our .env file
+      POSTGRES_USER: flight_user
+      POSTGRES_PASSWORD: flight_password
+      # IMPORTANT: use service name 'postgres' not 'localhost'
+      # Inside Docker, containers talk to each other by service name
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432 # Internal port — not 5435
+      POSTGRES_DB: flight_db
+      # Ollama runs on Mac — not in Docker
+      # host.docker.internal is a special DNS name that points to your Mac
+      OLLAMA_HOST: http://host.docker.internal:11434
+    volumes:
+      # Mount ml/models so FastAPI can load the trained model
+      - ../ml/models:/app/ml/models
+      # Mount ml/charts so dashboard can show pre-generated charts
+      - ../ml/charts:/app/ml/charts
+    depends_on:
+      # FastAPI won't start until PostgreSQL is ready
+      - postgres
+    restart: unless-stopped
+    networks:
+      - flight_network
+
+  # ── Streamlit Dashboard ──────────────────────────────────────
+  streamlit:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.streamlit
+    container_name: flight_streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      POSTGRES_USER: flight_user
+      POSTGRES_PASSWORD: flight_password
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: flight_db
+      # Streamlit talks to FastAPI using service name inside Docker
+      API_URL: http://fastapi:8000
+    volumes:
+      - ../ml/models:/app/ml/models
+      - ../ml/charts:/app/ml/charts
+    depends_on:
+      - postgres
+      - fastapi
+    restart: unless-stopped
+    networks:
+      - flight_network
+
+# ── Named volumes ────────────────────────────────────────────
 volumes:
   flight_intel_postgres_data:
+
+# ── Network ──────────────────────────────────────────────────
+# All containers join this network so they can talk to each other
+# by service name instead of IP address
+networks:
+  flight_network:
+    driver: bridge

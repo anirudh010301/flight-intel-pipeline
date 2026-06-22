@@ -1,0 +1,52 @@
+# ── Base image ───────────────────────────────────────────────
+# Same base as FastAPI — consistency across containers
+FROM python:3.12-slim
+
+# ── Working directory ────────────────────────────────────────
+WORKDIR /app
+
+# ── System dependencies ──────────────────────────────────────
+RUN apt-get update && \
+    apt-get install -y gcc g++ && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# ── Python dependencies ──────────────────────────────────────
+# Only install what Streamlit needs
+# Streamlit doesn't need airflow, dbt, great-expectations etc
+RUN pip install --no-cache-dir \
+    streamlit==1.31.1 \
+    plotly==5.18.0 \
+    pandas==2.2.0 \
+    numpy==1.26.4 \
+    psycopg2-binary==2.9.9 \
+    requests==2.31.0 \
+    python-dotenv==1.0.1 \
+    loguru==0.7.2 \
+    joblib==1.3.2 \
+    scikit-learn==1.4.0
+
+# ── Copy project files ───────────────────────────────────────
+# Streamlit needs dashboard, ai_assistant and ml folders
+COPY dashboard/ ./dashboard/
+COPY ai_assistant/ ./ai_assistant/
+COPY ml/ ./ml/
+COPY .env .env
+
+# ── Create necessary directories ─────────────────────────────
+RUN mkdir -p ml/models ml/charts
+
+# ── Streamlit configuration ──────────────────────────────────
+# Create streamlit config to disable the welcome screen
+# and set server settings
+RUN mkdir -p /root/.streamlit && \
+    printf '[server]\nheadless = true\nport = 8501\naddress = "0.0.0.0"\n\n[browser]\ngatherUsageStats = false\n' > /root/.streamlit/config.toml
+
+# ── Expose port ──────────────────────────────────────────────
+EXPOSE 8501
+
+# ── Start command ────────────────────────────────────────────
+# --server.address 0.0.0.0 accepts connections from outside container
+CMD ["streamlit", "run", "dashboard/app.py", \
+     "--server.port=8501", \
+     "--server.address=0.0.0.0"]
